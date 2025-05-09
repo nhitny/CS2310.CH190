@@ -12,7 +12,7 @@ from flags import DATA_FOLDER
 @DATASET_REGISTRY.register()
 class OxfordPets(DatasetBase):
 
-    dataset_dir = "oxford_pets"
+    dataset_dir = "OxfordPets"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(DATA_FOLDER))
@@ -181,6 +181,7 @@ class OxfordPets(DatasetBase):
                     label=relabeler[item.label],
                     classname=item.classname
                 )
+
                 dataset_new.append(item_new)
             output.append(dataset_new)
         

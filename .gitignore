@@ -1,2 +1,13 @@
 *.pyc
 __pycache__
+dataset/
+metadata/
+.huggingface/
+~/.cache/
+Dassl.pytorch/
+checkpoints/
+.env
+scripts/run/
+test_llamp.py
+test_llamp-nhitny-ver1.py
+test.py

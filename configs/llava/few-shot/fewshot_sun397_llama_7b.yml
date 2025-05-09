@@ -11,6 +11,8 @@ training:
   save_every: 10000
   batch_size: 4
   test_batch_size: 16
+  # test_batch_size: 8
+
   test_set: test
   topk: 1
   workers: 8

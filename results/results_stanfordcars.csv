@@ -1,0 +1,5 @@
+dataset,checkpoint,Base,New,HM
+StanfordCars,ckpt_remodel_trimmed_1.t7,81.2844,74.6719,77.838
+StanfordCars,ckpt_remodel_trimmed_2.t7,77.5112,74.2015,75.8203
+StanfordCars,ckpt_remodel_trimmed_3.t7,76.9865,74.5234,75.7349
+StanfordCars,AVERAGE,78.594,74.4656,76.4644

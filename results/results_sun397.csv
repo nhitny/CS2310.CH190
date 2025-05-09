@@ -1,0 +1,5 @@
+dataset,checkpoint,Base,New,HM
+SUN397,ckpt_remodel_trimmed_3.t7,83.7588,79.9798,81.8257
+SUN397,ckpt_remodel_trimmed_2.t7,83.4271,79.5657,81.4507
+SUN397,ckpt_remodel_trimmed_1.t7,83.3668,80.3939,81.8534
+SUN397,AVERAGE,83.5176,79.9798,81.7099

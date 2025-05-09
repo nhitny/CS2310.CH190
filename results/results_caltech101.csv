@@ -1,0 +1,5 @@
+dataset,checkpoint,Base,New,HM
+Caltech101,ckpt_remodel_trimmed_1.t7,98.4506,95.1965,96.7962
+Caltech101,ckpt_remodel_trimmed_2.t7,98.9671,95.1965,97.0452
+Caltech101,ckpt_remodel_trimmed_3.t7,99.0316,94.4323,96.6773
+Caltech101,AVERAGE,98.8164,94.9418,96.8396

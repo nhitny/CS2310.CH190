@@ -1,6 +1,7 @@
 import os
 import pickle
 
+
 from dassl.data.datasets import DATASET_REGISTRY, Datum, DatasetBase
 from dassl.utils import mkdir_if_missing
 
@@ -12,7 +13,7 @@ from flags import DATA_FOLDER
 @DATASET_REGISTRY.register()
 class FGVCAircraft(DatasetBase):
 
-    dataset_dir = "fgvc_aircraft"
+    dataset_dir = "FGVCAircraft"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(DATA_FOLDER))
@@ -35,8 +36,10 @@ class FGVCAircraft(DatasetBase):
         num_shots = cfg.NUM_SHOTS
         if num_shots >= 1:
             seed = cfg.SEED
-            preprocessed = os.path.join(self.split_fewshot_dir, f"shot_{num_shots}-seed_{seed}.pkl")
-            
+            preprocessed = os.path.join(
+                self.split_fewshot_dir, f"shot_{num_shots}-seed_{seed}.pkl"
+            )
+
             if os.path.exists(preprocessed):
                 print(f"Loading preprocessed few-shot data from {preprocessed}")
                 with open(preprocessed, "rb") as file:
@@ -51,7 +54,9 @@ class FGVCAircraft(DatasetBase):
                     pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
         subsample = cfg.SUBSAMPLE_CLASSES
-        train, val, test = OxfordPets.subsample_classes(train, val, test, subsample=subsample)
+        train, val, test = OxfordPets.subsample_classes(
+            train, val, test, subsample=subsample
+        )
 
         super().__init__(train_x=train, val=val, test=test)
 

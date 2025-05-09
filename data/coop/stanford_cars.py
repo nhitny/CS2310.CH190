@@ -12,7 +12,7 @@ from flags import DATA_FOLDER
 @DATASET_REGISTRY.register()
 class StanfordCars(DatasetBase):
 
-    dataset_dir = "stanford_cars"
+    dataset_dir = "StanfordCars"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(DATA_FOLDER))

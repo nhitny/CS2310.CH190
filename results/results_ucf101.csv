@@ -1,0 +1,5 @@
+dataset,checkpoint,Base,New,HM
+UCF101,ckpt_remodel_trimmed_1.t7,87.332,79.9892,83.4995
+UCF101,ckpt_remodel_trimmed_2.t7,84.4881,80.0433,82.2056
+UCF101,ckpt_remodel_trimmed_3.t7,85.4705,80.2596,82.7831
+UCF101,AVERAGE,85.7635,80.0974,82.8294

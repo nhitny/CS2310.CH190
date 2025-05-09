@@ -1,26 +1,30 @@
-#external libs
+# external libs
 import numpy as np
 from tqdm import tqdm
 from PIL import Image, ImageFilter
 import os
 import random
 from os.path import join as ospj
-from glob import glob 
-#torch libs
+from glob import glob
+
+# torch libs
 from torch.utils.data import Dataset
 import torch
 import torchvision.transforms as transforms
-#local libs
+
+# local libs
 from utils.utils import get_norm_values, chunks
 from itertools import chain, product
 import json
 from data.coop import *
 from argparse import Namespace
 from torchvision.transforms.functional import InterpolationMode
+from data.coop.dtd import DescribableTextures
+
 
 from data.randaugment import RandomAugment
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 CUSTOM_TEMPLATES = {
     "OxfordPets": "a photo of a {}, a type of pet.",
@@ -40,125 +44,156 @@ CUSTOM_TEMPLATES = {
     "ImageNetR": "a photo of a {}.",
 }
 
+
 class ImageLoader:
     def __init__(self, root):
         self.root_dir = root
 
     def __call__(self, img):
-        img = Image.open(ospj(self.root_dir,img)).convert('RGB') #We don't want alpha
+        img = Image.open(ospj(self.root_dir, img)).convert("RGB")  # We don't want alpha
         return img
-    
+
+
 class GaussianBlur(object):
     """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
-    def __init__(self, sigma=[.1, 2.]):
+    def __init__(self, sigma=[0.1, 2.0]):
         self.sigma = sigma
 
     def __call__(self, x):
         sigma = random.uniform(self.sigma[0], self.sigma[1])
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
-        return x    
+        return x
 
 
-def dataset_transform(phase, norm_family ='clip', rand_aug=False):
-    '''
-        Inputs
-            phase: String controlling which set of transforms to use
-            norm_family: String controlling which normaliztion values to use
-        
-        Returns
-            transform: A list of pytorch transforms
-    '''
+def dataset_transform(phase, norm_family="clip", rand_aug=False):
+    """
+    Inputs
+        phase: String controlling which set of transforms to use
+        norm_family: String controlling which normaliztion values to use
+
+    Returns
+        transform: A list of pytorch transforms
+    """
     mean, std = get_norm_values(norm_family=norm_family)
 
-    if phase == 'train':
+    if phase == "train":
         if rand_aug:
-            transform = transforms.Compose([
-                transforms.RandomResizedCrop(224, interpolation=InterpolationMode.BICUBIC),
-                transforms.RandomHorizontalFlip(),
-                # transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
-                # transforms.RandomGrayscale(p=0.2),
-                transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
-                RandomAugment(2,7,isPIL=True,augs=['Identity','AutoContrast','Equalize','Brightness','Sharpness',
-                                                'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate']),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std),
-            ])
+            transform = transforms.Compose(
+                [
+                    transforms.RandomResizedCrop(
+                        224, interpolation=InterpolationMode.BICUBIC
+                    ),
+                    transforms.RandomHorizontalFlip(),
+                    # transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+                    # transforms.RandomGrayscale(p=0.2),
+                    transforms.RandomApply([GaussianBlur([0.1, 2.0])], p=0.5),
+                    RandomAugment(
+                        2,
+                        7,
+                        isPIL=True,
+                        augs=[
+                            "Identity",
+                            "AutoContrast",
+                            "Equalize",
+                            "Brightness",
+                            "Sharpness",
+                            "ShearX",
+                            "ShearY",
+                            "TranslateX",
+                            "TranslateY",
+                            "Rotate",
+                        ],
+                    ),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
         else:
-            transform = transforms.Compose([
-                transforms.RandomResizedCrop(224, interpolation=InterpolationMode.BICUBIC),
-                transforms.RandomHorizontalFlip(),
+            transform = transforms.Compose(
+                [
+                    transforms.RandomResizedCrop(
+                        224, interpolation=InterpolationMode.BICUBIC
+                    ),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+
+    elif phase == "val" or phase == "test":
+        transform = transforms.Compose(
+            [
+                # transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
+                transforms.Resize(224, interpolation=InterpolationMode.BICUBIC),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std),
-            ])
-
-    elif phase == 'val' or phase == 'test':
-        transform = transforms.Compose([
-            # transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
-            transforms.Resize(224, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-    elif phase == 'all':
-        transform = transforms.Compose([
-            transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
+            ]
+        )
+    elif phase == "all":
+        transform = transforms.Compose(
+            [
+                transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std),
+            ]
+        )
     else:
-        raise ValueError('Invalid transform')
+        raise ValueError("Invalid transform")
 
     return transform
 
-def filter_data(all_data, pairs_gt, topk = 5):
-    '''
+
+def filter_data(all_data, pairs_gt, topk=5):
+    """
     Helper function to clean data
-    '''
+    """
     valid_files = []
-    with open('/home/ubuntu/workspace/top'+str(topk)+'.txt') as f:
+    with open("/home/ubuntu/workspace/top" + str(topk) + ".txt") as f:
         for line in f:
             valid_files.append(line.strip())
 
-    data, pairs, attr, obj  = [], [], [], []
+    data, pairs, attr, obj = [], [], [], []
     for current in all_data:
         if current[0] in valid_files:
             data.append(current)
-            pairs.append((current[1],current[2]))
+            pairs.append((current[1], current[2]))
             attr.append(current[1])
             obj.append(current[2])
-            
+
     counter = 0
     for current in pairs_gt:
         if current in pairs:
-            counter+=1
-    print('Matches ', counter, ' out of ', len(pairs_gt))
-    print('Samples ', len(data), ' out of ', len(all_data))
-    return data, sorted(list(set(pairs))), sorted(list(set(attr))), sorted(list(set(obj)))
+            counter += 1
+    print("Matches ", counter, " out of ", len(pairs_gt))
+    print("Samples ", len(data), " out of ", len(all_data))
+    return (
+        data,
+        sorted(list(set(pairs))),
+        sorted(list(set(attr))),
+        sorted(list(set(obj))),
+    )
 
-# Dataset class now
 
 DATASET_CLASSMAP = {
-    'Caltech101': Caltech101,
-    'FGVCAircraft': FGVCAircraft,
-    'EuroSAT': EuroSAT,
-    'ImageNet': ImageNet,
-    'StanfordCars': StanfordCars,
-    'DescribableTextures': DTD,
-    'Food101': Food101,
-    'OxfordPets': OxfordPets,
-    'OxfordFlowers': OxfordFlowers,
-    'SUN397': SUN397,
-    'UCF101': UCF101,
-    'ImageNetSketch': ImageNetSketch,
-    'ImageNetV2': ImageNetV2,
-    'ImageNetA': ImageNetA,
-    'ImageNetR': ImageNetR,
+    "Food101": Food101,  # tên class
+    "OxfordPets": OxfordPets,
+    "DescribableTextures": DescribableTextures,
+    "EuroSAT": EuroSAT,
+    "OxfordFlowers": OxfordFlowers,
+    "SUN397": SUN397,
+    "Caltech101": Caltech101,
+    "StanfordCars": StanfordCars,
+    "UCF101": UCF101,
+    "FGVCAircraft": FGVCAircraft,
+    "ImageNet": ImageNet,
 }
 
+
 class MetaDataset(Dataset):
-    '''
+    """
     Inputs
         root: String of base dir of dataset
         phase: String train, val, test
@@ -166,7 +201,8 @@ class MetaDataset(Dataset):
         subset: Boolean if true uses a subset of train at each epoch
         num_negs: Int, numbers of negative pairs per batch
         pair_dropout: Percentage of pairs to leave in current epoch
-    '''
+    """
+
     def __init__(
         self,
         phase,
@@ -176,7 +212,7 @@ class MetaDataset(Dataset):
         num_shots=16,
         num_template=1,
         rand_aug=False,
-        few_shot=False
+        few_shot=False,
     ):
         self.phase = phase
         self.return_images = return_images
@@ -184,34 +220,33 @@ class MetaDataset(Dataset):
         dataset_args = Namespace(
             SEED=seed,
             NUM_SHOTS=num_shots,
-            SUBSAMPLE_CLASSES='new' if phase == 'test' else 'base',
+            SUBSAMPLE_CLASSES="new" if phase == "test" else "base",
         )
 
         if few_shot:
-            dataset_args.SUBSAMPLE_CLASSES = 'all'
+            dataset_args.SUBSAMPLE_CLASSES = "all"
 
         self.dataset = DATASET_CLASSMAP[dataset](dataset_args)
         self.template = CUSTOM_TEMPLATES[dataset]
 
         self.classnames = self.dataset.classnames
         self.idx2label = self.dataset.lab2cname
-        self.loader = ImageLoader('')
-        self.transform = dataset_transform(self.phase, 'clip', rand_aug=rand_aug)
+        self.loader = ImageLoader("")
+        self.transform = dataset_transform(self.phase, "clip", rand_aug=rand_aug)
         print(self.transform)
         self.num_template = num_template
 
         self.data_dir = self.dataset.dataset_dir
 
-        if phase == 'train':
+        if phase == "train":
             self.dataset = self.dataset.train_x
         else:
             self.dataset = self.dataset.test
 
-
     def __getitem__(self, index):
-        '''
+        """
         Call for getting samples
-        '''
+        """
 
         data_sample = self.dataset[index]
 
@@ -226,26 +261,22 @@ class MetaDataset(Dataset):
             data.append(data_sample.path)
 
         return data
-    
+
     def __len__(self):
-        '''
+        """
         Call for length
-        '''
+        """
         return len(self.dataset)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from argparse import Namespace
     from flags import DATA_FOLDER
 
-    args = Namespace(
-        dataset='FGVCAircraft',
-        train_only=True,
-        num_shots=16,
-        seed=1
-    )
+    args = Namespace(dataset="FGVCAircraft", train_only=True, num_shots=16, seed=1)
 
     dset = MetaDataset(
-        phase='train',
+        phase="train",
         dataset=args.dataset,
         num_shots=args.num_shots,
         seed=args.seed,

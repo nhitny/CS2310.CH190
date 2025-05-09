@@ -14,7 +14,7 @@ from flags import DATA_FOLDER
 @DATASET_REGISTRY.register()
 class OxfordFlowers(DatasetBase):
 
-    dataset_dir = "oxford_flowers"
+    dataset_dir = "flowers102"
 
     def __init__(self, cfg):
         root = os.path.abspath(os.path.expanduser(DATA_FOLDER))

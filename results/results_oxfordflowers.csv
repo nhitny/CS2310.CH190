@@ -1,0 +1,5 @@
+dataset,checkpoint,Base,New,HM
+OxfordFlowers,ckpt_remodel_trimmed_1.t7,97.7208,77.1631,86.2337
+OxfordFlowers,ckpt_remodel_trimmed_2.t7,92.4976,77.0213,84.053
+OxfordFlowers,ckpt_remodel_trimmed_3.t7,95.6315,76.1702,84.7986
+OxfordFlowers,AVERAGE,95.2833,76.7849,85.0284
