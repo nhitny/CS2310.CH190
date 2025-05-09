@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://uit.edu.vn/">
-    <img src="image.png" alt="UIT Logo" width="300"/>
+    <img src="logo-UIT.png" alt="UIT Logo" width="400"/>
   </a>
 </p>
 
